@@ -157,8 +157,6 @@ function blocksSinceMidnight() : number {
 
 const now = ref(blocksSinceMidnight());
 
-const scrollContainer = ref<HTMLElement | null>(null);
-
 // Brug det til dine 5-minutters blokke
 
 let timer: number;
