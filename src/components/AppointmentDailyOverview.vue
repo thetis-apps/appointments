@@ -31,8 +31,7 @@
 
                         <div
                                 class="absolute left-0 right-0 z-10 flex items-center pointer-events-none"
-                                :style="{ top: (now - 70) * 3.5 / 6 + 'rem' }"
-                        >
+                                :style="{ top: (now - 67) * 3.5 / 6 + 'rem' }">
                             <div class="h-2 w-2 rounded-full bg-red-500 -ml-1"></div>
                             <div class="h-[2px] grow bg-red-500"></div>
                         </div>
@@ -93,7 +92,8 @@
                         </div>
 
                         <!-- Vertical lines -->
-                        <div class="col-start-1 col-end-2 row-start-1 hidden grid-rows-1 divide-x divide-gray-100 sm:grid sm:grid-cols-3 dark:divide-white/5">
+                        <div class="col-start-1 col-end-2 row-start-1 hidden grid-rows-1 divide-x divide-gray-100 sm:griddark:divide-white/5"
+                                :style="{ gridTemplateColumns: `repeat(${therapists.length}, minmax(0, 1fr))` }">
                             <div v-for="(_therapist, idx) in therapists"
                                     class="row-span-full"
                                     :style="{
@@ -104,7 +104,8 @@
 
                         <!-- Events -->
                         <ol class="col-start-1 col-end-2 row-start-1 grid grid-cols-1 sm:grid-cols-3"
-                                style="grid-template-rows: 1.75rem repeat(144, minmax(0, 1fr)) auto">
+                                style="grid-template-rows: 1.75rem repeat(144, minmax(0, 1fr)) auto"
+                                :style="{ gridTemplateColumns: `repeat(${therapists.length}, minmax(0, 1fr))` }">
                             <template v-for="(therapist, idx) in therapists">
                                 <li v-for="appointment in therapist.appointments" :key="appointment.datetime"
                                         class="relative mt-px flex dark:before:pointer-events-none dark:before:absolute dark:before:inset-1 dark:before:z-0 dark:before:rounded-lg dark:before:bg-gray-900"
