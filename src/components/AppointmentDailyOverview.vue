@@ -32,7 +32,7 @@
                     <div class="grid flex-auto grid-cols-1 grid-rows-1 relative">
 
                         <!-- Current time indicator -->
-                        <div
+                        <div ref="currentTimeIndicator"
                                 class="absolute left-0 right-0 z-10 flex items-center pointer-events-none"
                                 :style="{ top: (now - 84 + 2) * 3.5 / 6 + 'rem' }">
                             <div class="h-2 w-2 rounded-full bg-red-500 -ml-1"></div>
@@ -157,17 +157,28 @@ function blocksSinceMidnight() : number {
 
 const now = ref(blocksSinceMidnight());
 
-// Brug det til dine 5-minutters blokke
+const currentTimeIndicator = ref<HTMLElement | null>(null);
 
-let timer: number;
+let indicatorTimer: number;
+let scrollTimer: number;
 onMounted(() => {
-    timer = setInterval(() => {
+    now.value = blocksSinceMidnight();
+    indicatorTimer = setInterval(() => {
         now.value = blocksSinceMidnight();
-    }, 1000);
-})
+    }, 60000);
+    if (currentTimeIndicator.value) {
+        currentTimeIndicator.value.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+    scrollTimer = setInterval(() => {
+        if (currentTimeIndicator.value) {
+            currentTimeIndicator.value.scrollIntoView({behavior: 'smooth', block: 'center'});
+        }
+    }, 3600000);
+});
 
 onUnmounted(() => {
-    clearInterval(timer);
+    clearInterval(indicatorTimer);
+    clearInterval(scrollTimer);
 })
 
 const therapists: Ref<Therapist[]> = ref([{
