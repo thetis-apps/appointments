@@ -1,5 +1,6 @@
 <template>
-    <div class="flex h-full flex-col">
+    <div class="flex h-screen flex-col overflow-hidden">
+
         <header class="flex flex-none items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-white/15 dark:bg-gray-800/50">
             <h1 class="text-base font-semibold text-gray-900 dark:text-white">
                 <time datetime="2022-01">{{ "Kalender for " + DateTime.now()
@@ -8,12 +9,13 @@
             </h1>
             <LiveClockDisplay />
         </header>
-        <div class="isolate flex flex-auto flex-col bg-white dark:bg-gray-900">
+
+        <div ref="scrollContainer" class="isolate flex-1 flex-col bg-white dark:bg-gray-900 overflow-y-auto">
 
             <div style="width: 165%" class="flex max-w-full flex-none flex-col sm:max-w-none md:max-w-full">
-                <div class="sticky top-0 z-30 flex flex-auto bg-white shadow ring-1 ring-black/5 dark:bg-gray-900 dark:shadow-none dark:ring-white/20">
 
-                    <div class="sticky left-0 z-10 w-14 flex-none bg-white ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-white/5"></div>
+                <div class="sticky top-0 z-30 flex flex-auto bg-white shadow ring-1 ring-black/5 dark:bg-gray-900 dark:shadow-none dark:ring-white/20">
+                    <div class="left-0 z-10 w-14 flex-none bg-white ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-white/5"></div>
                     <div class="grid flex-auto grid-cols-1 grid-rows-1">
                         <div class="-mr-px hidden divide-x divide-gray-100 border-r border-gray-100 text-sm/6 text-gray-500 sm:grid dark:divide-white/10 dark:border-white/10 dark:text-gray-400"
                                 :style="{ gridTemplateColumns: `repeat(${therapists.length}, minmax(0, 1fr))` }">
@@ -27,11 +29,12 @@
 
                 <div class="flex flex-auto">
                     <div class="sticky left-0 z-10 w-14 flex-none bg-white ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-white/5"></div>
-                    <div class="grid flex-auto grid-cols-1 grid-rows-1">
+                    <div class="grid flex-auto grid-cols-1 grid-rows-1 relative">
 
+                        <!-- Current time indicator -->
                         <div
                                 class="absolute left-0 right-0 z-10 flex items-center pointer-events-none"
-                                :style="{ top: (now - 67) * 3.5 / 6 + 'rem' }">
+                                :style="{ top: (now - 84 + 2) * 3.5 / 6 + 'rem' }">
                             <div class="h-2 w-2 rounded-full bg-red-500 -ml-1"></div>
                             <div class="h-[2px] grow bg-red-500"></div>
                         </div>
@@ -153,6 +156,8 @@ function blocksSinceMidnight() : number {
 }
 
 const now = ref(blocksSinceMidnight());
+
+const scrollContainer = ref<HTMLElement | null>(null);
 
 // Brug det til dine 5-minutters blokke
 
