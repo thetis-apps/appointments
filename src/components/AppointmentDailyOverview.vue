@@ -116,12 +116,18 @@
                                             gridColumnStart: idx + 1,
                                             gridRow: `${appointment.start - 84 + 2} / span ${appointment.duration}`
                                         }">
-                                    <a href="#" class="group absolute inset-1 flex flex-col overflow-y-auto rounded-lg bg-blue-50 p-2 text-xs/5 hover:bg-blue-100 dark:bg-blue-600/15 dark:hover:bg-blue-600/20">
+                                    <a href="#"
+                                            class="group absolute inset-1 flex flex-col overflow-y-auto rounded-lg bg-blue-50 p-2 text-xs/5 hover:bg-blue-100 dark:bg-blue-600/15 dark:hover:bg-blue-600/20"
+                                            @mousedown="(event) => startDrag(appointment, idx, event)">
                                         <p class="order-1 font-semibold text-blue-700 dark:text-blue-300">{{ appointment.client }}</p>
                                         <p class="text-blue-500 group-hover:text-blue-700 dark:text-blue-400 dark:group-hover:text-blue-300">
                                             <time :datetime="appointment.datetime">{{ appointment.datetime.substring(11, 16) }}</time>
                                         </p>
                                     </a>
+                                    <div
+                                            class="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-blue-400/30 flex items-center justify-center"
+                                            @mousedown.stop="startResize(appointment, $event)">
+                                    </div>
                                 </li>
                             </template>
                         </ol>
@@ -133,7 +139,8 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, onUnmounted, type Ref, ref} from "vue";
+
+import {onMounted, onUnmounted, type Ref, ref, watch} from "vue";
 import {DateTime} from "luxon";
 import LiveClockDisplay from "./LiveClockDisplay.vue";
 
@@ -155,12 +162,135 @@ function blocksSinceMidnight() : number {
     return Math.floor(minutesSinceMidnight / 5);
 }
 
+const isResizing = ref(false)
+const isDragging = ref(false)
+const activeAppointment = ref<any>(null)
+const initialX = ref(0)
+const initialY = ref(0)
+const initialStart = ref(0)
+const initialTherapistIdx = ref(-1)
+const initialDuration = ref(0)
+
+const startDrag = (appointment: any, therapistIdx: number, event: MouseEvent) => {
+    isDragging.value = true
+    activeAppointment.value = appointment
+    initialY.value = event.clientY
+    initialX.value = event.clientX
+    initialStart.value = appointment.start
+    initialTherapistIdx.value = therapistIdx
+
+    window.addEventListener('mousemove', handleDrag)
+    window.addEventListener('mouseup', stopDrag)
+
+    event.preventDefault()
+}
+
+const handleDrag = (event: MouseEvent) => {
+    if (!isDragging.value || !activeAppointment.value) return
+
+    // Vertical movement: beregn antal 5-minutters-enheder som brugeren har flyttet musen
+    const deltaY = event.clientY - initialY.value
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize)
+    const pixelsPerUnit = (3.5 * rootFontSize) / 12
+    const deltaUnits = Math.round(deltaY / pixelsPerUnit)
+
+    // Opdater starttidspunktet (må ikke gå før midnat, f.eks. start 0)
+    activeAppointment.value.start = Math.max(0, initialStart.value + deltaUnits)
+
+    // Opdater datetime string (simpel version til visning)
+    const totalMinutes = activeAppointment.value.start * 5
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+    activeAppointment.value.datetime = activeAppointment.value.datetime.substring(0, 11) + timeString
+
+    // --- Horisontal flytning (Behandler) ---
+    const deltaX = event.clientX - initialX.value
+
+    // Find containeren for at kende bredden på en kolonne
+    const gridContainer = document.querySelector('.grid.flex-auto.grid-cols-1.grid-rows-1.relative')
+    if (gridContainer) {
+        const columnWidth = gridContainer.clientWidth / therapists.value.length
+        const columnDelta = Math.round(deltaX / columnWidth)
+        const newTherapistIdx = Math.max(0, Math.min(therapists.value.length - 1, initialTherapistIdx.value + columnDelta))
+
+        if (newTherapistIdx !== initialTherapistIdx.value) {
+            // Flyt aftalen i data-strukturen
+            const currentTherapist: Therapist = therapists.value[initialTherapistIdx.value]!
+            const targetTherapist: Therapist = therapists.value[newTherapistIdx]!
+
+            const appointmentIdx = currentTherapist.appointments.indexOf(activeAppointment.value)
+            if (appointmentIdx > -1) {
+                currentTherapist.appointments.splice(appointmentIdx, 1)
+                targetTherapist.appointments.push(activeAppointment.value)
+                initialTherapistIdx.value = newTherapistIdx
+                // Vi opdaterer initialX så den passer til den nye kolonne for at undgå "spring"
+                initialX.value += columnDelta * columnWidth
+            }
+        }
+    }
+
+
+}
+
+const stopDrag = () => {
+    isDragging.value = false
+    activeAppointment.value = null
+    initialTherapistIdx.value = -1
+    window.removeEventListener('mousemove', handleDrag)
+    window.removeEventListener('mouseup', stopDrag)
+
+    // Gem ændringer i localStorage
+    localStorage.setItem("therapists", JSON.stringify(therapists.value));
+}
+
+const startResize = (appointment: any, event: MouseEvent) => {
+    isResizing.value = true
+    activeAppointment.value = appointment
+    initialY.value = event.clientY
+    initialDuration.value = appointment.duration
+
+    // Tilføj globale listeners så vi fanger musen selvom den forlader elementet
+    window.addEventListener('mousemove', handleResize)
+    window.addEventListener('mouseup', stopResize)
+
+    // Forhindr tekst-markering under drag
+    event.preventDefault()
+}
+
+const handleResize = (event: MouseEvent) => {
+    if (!isResizing.value || !activeAppointment.value) return
+
+    const deltaY = event.clientY - initialY.value
+
+    // 1. Find ud af hvor mange pixels 1rem er i browseren lige nu (typisk 16px)
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize)
+
+    // 2. Beregn pixels pr. enhed ud fra din formel: (3.5 rem / 12 enheder)
+    const pixelsPerUnit = (3.5 * rootFontSize) / 12
+
+    // 3. Omregn din bevægelse (pixels) til enheder
+    const deltaUnits = Math.round(deltaY / pixelsPerUnit)
+
+    // Opdater varigheden, men sæt en minimumsgrænse (f.eks. 1 enhed)
+    const newDuration = initialDuration.value + deltaUnits
+    activeAppointment.value.duration = Math.max(1, newDuration)
+}
+
+const stopResize = () => {
+    isResizing.value = false
+    activeAppointment.value = null
+    window.removeEventListener('mousemove', handleResize)
+    window.removeEventListener('mouseup', stopResize)
+}
+
 const now = ref(blocksSinceMidnight());
 
 const currentTimeIndicator = ref<HTMLElement | null>(null);
 
 let indicatorTimer: number;
 let scrollTimer: number;
+
 onMounted(() => {
     now.value = blocksSinceMidnight();
     indicatorTimer = setInterval(() => {
@@ -181,7 +311,7 @@ onUnmounted(() => {
     clearInterval(scrollTimer);
 })
 
-const therapists: Ref<Therapist[]> = ref([{
+const defaultData =[{
         name: "Børge Behandler",
         appointments: [
             {
@@ -227,8 +357,20 @@ const therapists: Ref<Therapist[]> = ref([{
             duration: 9,
             start: 90
         }]
-    }]
-);
+    }
+];
+
+const therapists: Ref<Therapist[]> = ref([]);
+
+let data = localStorage.getItem("therapists");
+if (!data) {
+    therapists.value = defaultData;
+    localStorage.setItem("therapists", JSON.stringify(therapists.value));
+} else {
+    therapists.value = JSON.parse(data);
+}
+
+watch(therapists, () => localStorage.setItem("therapists", JSON.stringify(therapists.value)), {deep: true})
 
 </script>
 
