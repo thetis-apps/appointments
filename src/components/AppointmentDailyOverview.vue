@@ -34,7 +34,7 @@
                         <!-- Current time indicator -->
                         <div ref="currentTimeIndicator"
                                 class="absolute left-0 right-0 z-10 flex items-center pointer-events-none"
-                                :style="{ top: (now - 84 + 2) * 3.5 / 6 + 'rem' }">
+                                :style="{ top: (now - 84 + 3) * 3.5 / 6 + 'rem' }">
                             <div class="h-2 w-2 rounded-full bg-red-500 -ml-1"></div>
                             <div class="h-[2px] grow bg-red-500"></div>
                         </div>
@@ -191,7 +191,7 @@ const handleDrag = (event: MouseEvent) => {
     // Vertical movement: beregn antal 5-minutters-enheder som brugeren har flyttet musen
     const deltaY = event.clientY - initialY.value
     const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize)
-    const pixelsPerUnit = (3.5 * rootFontSize) / 12
+    const pixelsPerUnit = (3.5 * rootFontSize) / 6
     const deltaUnits = Math.round(deltaY / pixelsPerUnit)
 
     // Opdater starttidspunktet (må ikke gå før midnat, f.eks. start 0)
