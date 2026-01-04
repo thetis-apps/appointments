@@ -19,11 +19,16 @@ watch(durationInMinutes, () => {
 </script>
 
 <template>
-    <div class="flex flex-col gap-4">
-        <input type="text" v-model="appointment!.client" placeholder="Klientens navn" class="border border-gray-300 rounded-md px-3 py-2 w-full">
-        <input type="datetime-local" v-model="appointment!.datetime" class="border border-gray-300 rounded-md px-3 py-2 w-full">
-        <input type="number" v-model="durationInMinutes" placeholder="Aftalelængde (minutter)"
-               class="border border-gray-300 rounded-md px-3 py-2 w-full text-right step" step="5">
+    <div class="grid gap-4 grid-cols-[auto_1fr] p-10">
+        <label for="client" class="py-2">Klient</label>
+        <input id="client" type="text" v-model="appointment!.client" placeholder="Klientens navn" class="border border-gray-300 rounded-md px-3 py-2 w-full">
+        <label for="datetime" class="py-2">Aftaledato</label>
+        <input id="datetime" type="datetime-local" v-model="appointment!.datetime" class="border border-gray-300 rounded-md px-3 py-2 w-64">
+        <label for="duration" class="py-2">Aftalelængde (minutter)</label>
+        <input id="duration" type="number" v-model="durationInMinutes" placeholder="Aftalelængde (minutter)"
+               class="border border-gray-300 rounded-md px-3 py-2 text-right step w-24" step="5">
+    </div>
+    <div class="flex justify-end">
         <button @click="saveAppointment" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Gem ændringer</button>
     </div>
 </template>
