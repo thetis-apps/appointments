@@ -118,7 +118,8 @@
                                         }">
                                     <a href="#"
                                             class="group absolute inset-1 flex flex-col overflow-y-auto rounded-lg bg-blue-50 p-2 text-xs/5 hover:bg-blue-100 dark:bg-blue-600/15 dark:hover:bg-blue-600/20"
-                                            @mousedown="(event) => startDrag(appointment, idx, event)">
+                                            @mousedown="(event) => startDrag(appointment, idx, event)"
+                                            @click="edit(appointment)">
                                         <p class="order-1 font-semibold text-blue-700 dark:text-blue-300">{{ appointment.client }}</p>
                                         <p class="text-blue-500 group-hover:text-blue-700 dark:text-blue-400 dark:group-hover:text-blue-300">
                                             <time :datetime="appointment.datetime">{{ appointment.datetime.substring(11, 16) }}</time>
@@ -136,6 +137,9 @@
             </div>
         </div>
     </div>
+    <WideSlideOver title="Ret aftale" :open="editing" @closed="editing = false">
+        <AppointmentForm v-if="appointment" v-model="appointment" @done="editing = false" />
+    </WideSlideOver>
 </template>
 
 <script setup lang="ts">
@@ -143,17 +147,14 @@
 import {onMounted, onUnmounted, type Ref, ref, watch} from "vue";
 import {DateTime} from "luxon";
 import LiveClockDisplay from "./LiveClockDisplay.vue";
+import WideSlideOver from "./WideSlideOver.vue";
+import AppointmentForm from "./AppointmentForm.vue";
 
-interface Therapist {
-    name: string;
-    appointments: Appointment[];
-}
+const appointment = ref<Appointment | null>(null)
 
-interface Appointment {
-    client: string;
-    datetime: string;
-    duration: number;
-    start: number;
+function edit(app: Appointment) {
+    appointment.value = app;
+    editing.value = true
 }
 
 function blocksSinceMidnight() : number {
@@ -161,6 +162,8 @@ function blocksSinceMidnight() : number {
     const minutesSinceMidnight = dateTimeNowInCph.hour * 60 + dateTimeNowInCph.minute;
     return Math.floor(minutesSinceMidnight / 5);
 }
+
+const editing = ref(false)
 
 const isResizing = ref(false)
 const isDragging = ref(false)
