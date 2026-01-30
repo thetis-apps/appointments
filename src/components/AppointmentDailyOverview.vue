@@ -29,7 +29,9 @@
 
                 <div class="flex flex-auto">
                     <div class="sticky left-0 z-10 w-14 flex-none bg-white ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-white/5"></div>
-                    <div class="grid flex-auto grid-cols-1 grid-rows-1 relative">
+                    <div ref="eventGrid"
+                            class="grid flex-auto grid-cols-1 grid-rows-1 relative"
+                            @click="createAppointmentAt">
 
                         <!-- Current time indicator -->
                         <div ref="currentTimeIndicator"
@@ -40,7 +42,7 @@
                         </div>
 
                         <!-- Horizontal lines -->
-                        <div class="col-start-1 col-end-2 row-start-1 grid divide-y divide-gray-100 dark:divide-white/5"
+                        <div class="col-start-1 col-end-2 row-start-1 grid divide-y divide-gray-100 dark:divide-white/5 pointer-events-none"
                                 style="grid-template-rows: repeat(24, minmax(3.5rem, 1fr))">
                             <div class="row-end-1 h-7"></div>
                             <div>
@@ -95,7 +97,7 @@
                         </div>
 
                         <!-- Vertical lines -->
-                        <div class="col-start-1 col-end-2 row-start-1 hidden grid-rows-1 divide-x divide-gray-100 sm:griddark:divide-white/5"
+                        <div class="col-start-1 col-end-2 row-start-1 hidden grid-rows-1 divide-x divide-gray-100 sm:griddark:divide-white/5 pointer-events-none"
                                 :style="{ gridTemplateColumns: `repeat(${therapists.length}, minmax(0, 1fr))` }">
                             <div v-for="(_therapist, idx) in therapists"
                                     class="row-span-full"
@@ -117,6 +119,7 @@
                                             gridRow: `${appointment.start - 84 + 2} / span ${appointment.duration}`
                                         }">
                                     <a href="#"
+                                            data-appointment
                                             class="group absolute inset-1 flex flex-col overflow-y-auto rounded-lg bg-blue-50 p-2 text-xs/5 hover:bg-blue-100 dark:bg-blue-600/15 dark:hover:bg-blue-600/20"
                                             @mousedown="(event) => startDrag(appointment, idx, event)"
                                             @click="edit(appointment)">
@@ -138,7 +141,7 @@
         </div>
     </div>
     <WideSlideOver title="Ret aftale" :open="editing" @closed="editing = false">
-        <AppointmentForm v-if="appointment" v-model="appointment" @done="editing = false" />
+        <AppointmentForm v-if="appointment" v-model="appointment" @done="editing = false" @cancel="editing = false" />
     </WideSlideOver>
 </template>
 
@@ -151,9 +154,56 @@ import WideSlideOver from "./WideSlideOver.vue";
 import AppointmentForm from "./AppointmentForm.vue";
 
 const appointment = ref<Appointment | null>(null)
+const eventGrid = ref<HTMLDivElement | null>(null)
+
+const gridStart = 84
+const gridUnits = 144
+const defaultDuration = 6
 
 function edit(app: Appointment) {
     appointment.value = app;
+    editing.value = true
+}
+
+function createAppointmentAt(event: MouseEvent) {
+
+    console.log('Creating appointment at', event.clientX, event.clientY)
+
+    if (isDragging.value || isResizing.value) return
+
+    const target = event.target as HTMLElement | null
+    if (target?.closest('[data-appointment]')) return
+    if (!eventGrid.value || therapists.value.length === 0) return
+
+    const rect = eventGrid.value.getBoundingClientRect()
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize)
+    const headerOffsetPx = 1.75 * rootFontSize
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top - headerOffsetPx
+
+    if (x < 0 || y < 0) return
+
+    const columnWidth = rect.width / therapists.value.length
+    const therapistIdx = Math.max(0, Math.min(therapists.value.length - 1, Math.floor(x / columnWidth)))
+    const rowHeight = (rect.height - headerOffsetPx) / gridUnits
+    const unit = Math.max(0, Math.min(gridUnits - 1, Math.floor(y / rowHeight)))
+
+    const start = gridStart + unit
+    const totalMinutes = start * 5
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+    const dateString = DateTime.now().toFormat("yyyy-LL-dd")
+
+    const newAppointment: Appointment = {
+        client: 'Ny aftale',
+        datetime: `${dateString}T${timeString}`,
+        duration: defaultDuration,
+        start
+    }
+
+    therapists.value[therapistIdx]!.appointments.push(newAppointment)
+    appointment.value = newAppointment
     editing.value = true
 }
 

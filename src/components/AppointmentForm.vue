@@ -4,10 +4,14 @@ import {type ModelRef, ref, watch} from "vue";
 
 const appointment: ModelRef<Appointment | undefined> = defineModel();
 
-const emit = defineEmits(['done'])
+const emit = defineEmits(['done', 'cancel'])
 
 function saveAppointment() {
     emit('done')
+}
+
+function cancelEditing() {
+    emit('cancel')
 }
 
 const durationInMinutes = ref<number>((appointment.value?.duration ?? 6) * 5)
@@ -28,7 +32,8 @@ watch(durationInMinutes, () => {
         <input id="duration" type="number" v-model="durationInMinutes" placeholder="Aftalelængde (minutter)"
                class="border border-gray-300 rounded-md px-3 py-2 text-right step w-24" step="5">
     </div>
-    <div class="flex justify-end">
+    <div class="flex justify-end gap-2">
+        <button @click="cancelEditing" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200">Annuller</button>
         <button @click="saveAppointment" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Gem ændringer</button>
     </div>
 </template>
