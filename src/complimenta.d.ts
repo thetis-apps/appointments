@@ -8,4 +8,5 @@ interface Appointment {
     datetime: string;
     duration: number;
     start: number;
+    appointmentPk: number;
 }

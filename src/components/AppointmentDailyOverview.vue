@@ -112,7 +112,7 @@
                                 style="grid-template-rows: 1.75rem repeat(144, minmax(0, 1fr)) auto"
                                 :style="{ gridTemplateColumns: `repeat(${therapists.length}, minmax(0, 1fr))` }">
                             <template v-for="(therapist, idx) in therapists">
-                                <li v-for="appointment in therapist.appointments" :key="appointment.datetime"
+                                <li v-for="appointment in therapist.appointments" :key="appointment.appointmentPk"
                                         class="relative mt-px flex dark:before:pointer-events-none dark:before:absolute dark:before:inset-1 dark:before:z-0 dark:before:rounded-lg dark:before:bg-gray-900"
                                         :style="{
                                             gridColumnStart: idx + 1,
@@ -141,7 +141,7 @@
         </div>
     </div>
     <WideSlideOver title="Ret aftale" :open="editing" @closed="editing = false">
-        <AppointmentForm v-if="appointment" v-model="appointment" @done="editing = false" @cancel="editing = false" />
+        <AppointmentForm v-if="appointment" v-model="appointment" @done="editing = false" @cancel="editing = false" @delete="deleteAppointment" />
     </WideSlideOver>
 </template>
 
@@ -159,10 +159,28 @@ const eventGrid = ref<HTMLDivElement | null>(null)
 const gridStart = 84
 const gridUnits = 144
 const defaultDuration = 6
+let nextAppointmentPk = 1
 
 function edit(app: Appointment) {
     appointment.value = app;
     editing.value = true
+}
+
+function deleteAppointment() {
+    if (!appointment.value) return
+    const appointmentPk = appointment.value.appointmentPk
+    const therapist = therapists.value.find((entry) =>
+        entry.appointments.some((appt) => appt.appointmentPk === appointmentPk)
+    )
+    if (!therapist) {
+        editing.value = false
+        appointment.value = null
+        return
+    }
+    therapist.appointments = therapist.appointments.filter((appt) => appt.appointmentPk !== appointmentPk)
+    editing.value = false
+    appointment.value = null
+    localStorage.setItem("therapists", JSON.stringify(therapists.value));
 }
 
 function createAppointmentAt(event: MouseEvent) {
@@ -199,7 +217,8 @@ function createAppointmentAt(event: MouseEvent) {
         client: 'Ny aftale',
         datetime: `${dateString}T${timeString}`,
         duration: defaultDuration,
-        start
+        start,
+        appointmentPk: nextAppointmentPk++
     }
 
     therapists.value[therapistIdx]!.appointments.push(newAppointment)
@@ -368,24 +387,28 @@ const defaultData =[{
         name: "Børge Behandler",
         appointments: [
             {
+                appointmentPk: 1,
                 client: 'Ole Olsen',
                 datetime: '2022-01-15T10:00',
                 duration: 18, // unit is 5 minutes
                 start: 120 // multiple of 5 minutes since midnight
             },
             {
+                appointmentPk: 2,
                 client: 'Ib Bo Larsen',
                 datetime: '2022-01-15T11:30',
                 duration: 6, // unit is 5 minutes
                 start: 138 // multiple of 5 minutes since midnight
             },
             {
+                appointmentPk: 3,
                 client: 'Svend Bent Hagemann',
                 datetime: '2022-01-15T13:00',
                 duration: 18, // unit is 5 minutes
                 start: 156 // multiple of 5 minutes since midnight
             },
             {
+                appointmentPk: 4,
                 client: 'Bengt Berg',
                 datetime: '2022-01-15T15:00',
                 duration: 12, // unit is 5 minutes
@@ -396,6 +419,7 @@ const defaultData =[{
     {
         name: "Maren Massør",
         appointments: [{
+            appointmentPk: 5,
             client: 'Peter Petersen',
             datetime: '2022-01-15T12:00',
             duration: 12,
@@ -405,6 +429,7 @@ const defaultData =[{
     {
         name: "Robert Radbrækker",
         appointments: [{
+            appointmentPk: 6,
             client: 'Mads Madsen',
             datetime: '2022-01-15T07:30',
             duration: 9,
@@ -415,12 +440,29 @@ const defaultData =[{
 
 const therapists: Ref<Therapist[]> = ref([]);
 
+const syncAppointmentPks = () => {
+    let maxPk = 0
+    therapists.value.forEach((therapist) => {
+        therapist.appointments.forEach((appt) => {
+            if (!appt.appointmentPk) {
+                maxPk += 1
+                appt.appointmentPk = maxPk
+            }
+            maxPk = Math.max(maxPk, appt.appointmentPk)
+        })
+    })
+    nextAppointmentPk = maxPk + 1
+}
+
 let data = localStorage.getItem("therapists");
 if (!data) {
     therapists.value = defaultData;
+    syncAppointmentPks()
     localStorage.setItem("therapists", JSON.stringify(therapists.value));
 } else {
     therapists.value = JSON.parse(data);
+    syncAppointmentPks()
+    localStorage.setItem("therapists", JSON.stringify(therapists.value));
 }
 
 watch(therapists, () => localStorage.setItem("therapists", JSON.stringify(therapists.value)), {deep: true})
